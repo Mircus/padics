@@ -1,0 +1,94 @@
+# padic-ds · v0.1.0
+
+A true **p-adic** foundation for data science — no mod-p shortcuts.
+
+This repo provides:
+- **Qp arithmetic** with finite precision and valuations.
+- **Balls** and **ultrametric** distance \(d_p(x,y)=|x-y|_p\).
+- **Hensel lifting** for roots in \(\mathbb Z_p\).
+- A minimal **Bruhat–Tits** (BT) tree surrogate and LCA-based distances.
+- Prototype **kNN** and **ultrametric dendrograms** built on the p-adic metric.
+
+## Install
+```bash
+pip install -e .
+```
+
+## TL;DR math
+- Every nonzero \(x\in \mathbb Q_p\) can be written uniquely as \(x=p^{v}u\)
+  where \(v\in\mathbb Z\) is the **valuation** \(v_p(x)\) and \(u\in \mathbb Z_p^{\times}\) is a **unit**.
+- The **p-adic absolute value** is \(|x|_p=p^{-v_p(x)}\) and induces an **ultrametric**:
+  \(d_p(x,y)=|x-y|_p\) with the strong triangle inequality
+  \(d(x,z)\le\max\{d(x,y),d(y,z)\}\).
+- **Balls** \(B(a,p^{-n})\) are both open and closed; any two balls are either disjoint or nested.
+- **Hensel's lemma** lifts roots modulo \(p\) to roots in \(\mathbb Z_p\) when \(f'(a)\not\equiv 0\pmod p\).
+- The **Bruhat–Tits tree** (for \(\mathrm{PGL}_2(\mathbb Q_p)\)) is a canonical hierarchical space; in practice we use a truncated p-ary tree based on digits.
+
+## Core API
+```python
+from padic import QpContext, Qp, QpBall, hensel_lift_simple
+from padic import BTRootedTree, bt_distance, lca_depth, digits_p_adic
+from padic import padic_abs, padic_dist
+from padic import PadicKNNClassifier, ultrametric_dendrogram
+```
+
+## Quickstart: Qp and balls
+```python
+from padic import QpContext, Qp, QpBall, padic_dist
+
+ctx = QpContext(p=3, prec=8)     # 3-adics, 8 digits of precision
+x = Qp.from_rational(ctx, 7, 12) # element in Q_3
+y = Qp.from_int(ctx, 10)
+
+d = padic_dist(x, y)
+B = QpBall(x, n=3)               # ball of radius 3^{-3}
+assert B.contains(x)
+```
+
+## Hensel lifting (simple)
+```python
+# f(X) = X^2 - 2 over Z_5; 3^2=9≡-? mod 5 -> check a0=3 gives 9-2=7 ≡ 2 mod5; try a0= ±? (2 is non-res square mod 5)
+# Take f(X)=X^2-6 over Z_5; a0=1: 1-6=-5 ≡ 0 (mod 5), f'(1)=2 not 0 mod5
+from padic import QpContext, hensel_lift_simple
+ctx = QpContext(5, prec=8)
+f  = lambda t: t*t - 6
+fp = lambda t: 2*t
+root = hensel_lift_simple(ctx, f, fp, a0_mod_p=1, target_prec=8)
+print(root)
+```
+
+## BT digits & ultrametric dendrogram
+```python
+from padic import QpContext, Qp, ultrametric_dendrogram
+ctx = QpContext(3, prec=6)
+X = [Qp.from_int(ctx, n) for n in [1, 4, 10, 13, 40, 121]]
+H = ultrametric_dendrogram(ctx, X)  # integer ultrametric heights
+```
+
+## kNN in (Qp^d, d_p)
+```python
+from padic import QpContext, Qp, PadicKNNClassifier
+import numpy as np
+
+ctx = QpContext(3, prec=6)
+def embed_row(row):
+    return [Qp.from_rational(ctx, int(100*r), 1) for r in row]
+
+Xr = np.array([[0.1, 0.2],[0.11,0.21],[2.0,2.0],[2.01,2.02]])
+yr = np.array([0,0,1,1])
+Xq = list(map(embed_row, Xr))
+knn = PadicKNNClassifier(ctx, k=1).fit(Xq, yr)
+pred = knn.predict(Xq)
+```
+
+## Notebooks
+- `notebooks/03_padic_basics.ipynb`: Qp arithmetic, balls, Hensel demos.
+- `notebooks/04_ultrametric_ml.ipynb`: BT digits, dendrograms, p-adic kNN toy example.
+
+## Roadmap
+- Faster **ball trees** and indexing; multi-d coordinates with true product ultrametrics.
+- PSD **tree kernels** + Gaussian processes on BT.
+- Lipschitz learners over ultrametrics with depth regularization.
+- Visualization of ball covers/refinements.
+
+MIT License.

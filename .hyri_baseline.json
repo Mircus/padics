@@ -1,0 +1,17 @@
+{
+  ".github/workflows/ci.yml": "21bad99049ddd67ebef3fee040bf5285631dc30a2df0202ba6a60481abfbe509",
+  "LICENSE": "8b5260acfb37e93cd7dfdab3e4b20ecf803da65c6fb4a90bd2e699c34dbd6f80",
+  "README.md": "fec902e880bc40b1d3eaf8ea7c926ab8c9c91e9aa567c41a6d0e68dec52b9d15",
+  "notebooks/03_padic_basics.ipynb": "7c96c23ed0bcb404a2f287c6b413973f4f075f2f3590cb11aa7c7e6acb9b2b55",
+  "notebooks/04_ultrametric_ml.ipynb": "2259c1028bd3bdd3f33e12d556edb476c7294aec26fcbd72bb6b76e74eda1987",
+  "pyproject.toml": "f88daf520958cc70074eaef7656c22473b65bbd26b58f4b7a5389fbe5e96c06e",
+  "src/padic/__init__.py": "120cb5f4d45dc903d98016e8fb415065b19d7d3add42527635861d64e055532c",
+  "src/padic/ball.py": "a84efc0c8ef0a53e069cb5abe5de322dc60b37595de736bd7225a8dfaa80ed65",
+  "src/padic/btree.py": "077c7be1e588046b5cd44d5026c2221b81df25687e488c7ecc2e1085646d4a0f",
+  "src/padic/field.py": "5d3600791d496a2259fda24a777d2bebf1287edc8d63096bca74178f9e0a93d5",
+  "src/padic/hclust.py": "234451ccb710ea436455efaf61176f816e979a2f9f6a01515b5e47165ed885fe",
+  "src/padic/hensel.py": "2b963975e1476b315d1136b9286c55639fb5efc611c2510e07f449a8c8c84750",
+  "src/padic/knn.py": "726b4bd7d9314dc6887f88157cd658ce0bc28019aafc21116fd4f1df7145d58f",
+  "src/padic/metrics.py": "ab508058d7d11e92536cabd5dce4301610a84971f10fc87084e48023ab8d00a0",
+  "tests/test_field.py": "e4052932f499f3487fe99e8e75aa73f7e76a930039ead178c7bfa0f308e45ae0"
+}

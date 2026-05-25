@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "padic-ds"
+version = "0.1.0"
+description = "Foundations for p-adic data science: Qp arithmetic, Hensel lifting, balls/ultrametrics, Bruhat–Tits tree, and basic learners."
+authors = [{name="HoloMathics / Mirco A. Mannucci"}]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["numpy>=1.23","scikit-learn>=1.1","matplotlib>=3.6"]
+keywords = ["p-adic","Qp","ultrametric","Bruhat–Tits","Hensel","data science"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Scientific/Engineering :: Mathematics"
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff", "mypy"]
