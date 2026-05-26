@@ -92,12 +92,13 @@ def digits_with_valuation(x: Qp, total_depth: Optional[int] = None) -> List[int]
         combined = leading + unit_digits
         return combined[:depth]
     else:
-        # Negative valuation: prepend sentinel p (not in 0..p-1) for each
-        # unit of negative valuation so that elements differing by a power
-        # of p map to *different* tree positions and bt_distance_full > 0.
-        # Sentinel p is outside the normal digit range [0, p-1], ensuring
-        # the leading prefix diverges whenever valuations differ.
-        leading = [x.ctx.p] * min(-v, depth)
+        # Negative valuation: prepend sentinel (p-1) for each unit of
+        # negative valuation so that elements with v < 0 map to *different*
+        # tree positions than those with v >= 0, keeping bt_distance_full > 0.
+        # We use p-1 (the largest valid digit) instead of p so that all
+        # digits remain in the valid range [0, p-1].  Note: p >= 2, so p-1 >= 1.
+        sentinel = x.ctx.p - 1
+        leading = [sentinel] * min(-v, depth)
         combined = leading + unit_digits
         return combined[:depth]
 

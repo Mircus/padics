@@ -41,6 +41,22 @@ def vp_int(n: int, p: int) -> int:
     return v
 
 
+def _is_prime(n: int) -> bool:
+    """Return True iff n is a prime integer (n >= 2)."""
+    if n < 2:
+        return False
+    if n == 2:
+        return True
+    if n % 2 == 0:
+        return False
+    i = 3
+    while i * i <= n:
+        if n % i == 0:
+            return False
+        i += 2
+    return True
+
+
 @dataclass(frozen=True)
 class QpContext:
     """Immutable context for a p-adic computation: prime p and working precision.
@@ -58,6 +74,11 @@ class QpContext:
     def __post_init__(self) -> None:
         if self.p < 2:
             raise ValueError(f"p must be a prime ≥ 2, got {self.p}")
+        if not _is_prime(self.p):
+            raise ValueError(
+                f"p must be prime, got {self.p} (composite numbers do not yield "
+                "well-defined p-adic fields; p-adic arithmetic is only defined for prime p)."
+            )
         if self.prec < 1:
             raise ValueError(f"prec must be ≥ 1, got {self.prec}")
 
