@@ -19,7 +19,7 @@ from padic import (
     QpContext, Qp, PrecisionError, QpBall,
     hensel_lift_simple,
     bt_distance, bt_distance_full, lca_depth, digits_with_valuation,
-    padic_dist, pairwise_padic_dist,
+    padic_dist, pairwise_padic_dist, pairwise_padic_dist_vec,
     PadicKNNClassifier,
 )
 
@@ -440,3 +440,117 @@ def test_knn_not_fitted_raises(ctx3):
     clf = PadicKNNClassifier(ctx3, k=1)
     with pytest.raises(NotFittedError):
         clf.predict([[Qp.from_int(ctx3, 1)]])
+
+
+# ===========================================================================
+# 10. Edge cases: digits_with_valuation (negative valuations)
+# ===========================================================================
+
+@pytest.mark.parametrize("num,den,expected_v", [
+    (1, 5,   -1),
+    (1, 25,  -2),
+    (1, 125, -3),
+])
+def test_digits_with_valuation_encodes_negative_valuation(ctx5, num, den, expected_v):
+    """digits_with_valuation must produce a different sequence for v < 0 vs v = 0.
+
+    Specifically, 1 (v=0) and 1/p^k (v=-k) must not share the same encoding,
+    otherwise bt_distance_full collapses elements that differ by powers of p.
+    """
+    x = Qp.from_int(ctx5, 1)                    # v = 0
+    y = Qp.from_rational(ctx5, num, den)         # v < 0
+    assert y.val() == expected_v
+    dx = digits_with_valuation(x, ctx5.prec)
+    dy = digits_with_valuation(y, ctx5.prec)
+    assert dx != dy, (
+        f"digits_with_valuation failed to distinguish v=0 from v={expected_v}: "
+        f"both returned {dx}"
+    )
+
+
+@pytest.mark.parametrize("base", [1, 2, 3, 7, 12])
+def test_bt_distance_full_separates_x_from_px_all_valuations(ctx5, base):
+    """bt_distance_full(x, p*x) > 0 for any nonzero x (v >= 0 and v < 0)."""
+    x  = Qp.from_int(ctx5, base)
+    px = Qp.from_int(ctx5, base * ctx5.p)
+    assert bt_distance_full(ctx5, x, px) > 0, (
+        f"bt_distance_full returned 0 for x={base} and p*x={base*ctx5.p}"
+    )
+
+
+def test_bt_distance_full_negative_valuation_separated(ctx5):
+    """bt_distance_full must be >0 between 1/p (v=-1) and 1/p^2 (v=-2)."""
+    a = Qp.from_rational(ctx5, 1, 5)    # v = -1
+    b = Qp.from_rational(ctx5, 1, 25)   # v = -2
+    assert bt_distance_full(ctx5, a, b) > 0
+
+
+# ===========================================================================
+# 11. Edge cases: pairwise_padic_dist_vec validation
+# ===========================================================================
+
+def test_pairwise_dist_vec_rejects_mismatched_lengths(ctx5):
+    """pairwise_padic_dist_vec must raise ValueError for unequal vector lengths."""
+    a = Qp.from_int(ctx5, 1)
+    b = Qp.from_int(ctx5, 2)
+    c = Qp.from_int(ctx5, 3)
+    X = [[a, b], [c]]   # row 0 has length 2, row 1 has length 1
+    with pytest.raises(ValueError, match="length"):
+        pairwise_padic_dist_vec(X)
+
+
+def test_pairwise_dist_vec_rejects_mismatched_contexts():
+    """pairwise_padic_dist_vec must raise ValueError for mixed QpContexts."""
+    ctx_a = QpContext(3, prec=5)
+    ctx_b = QpContext(3, prec=6)
+    X = [
+        [Qp.from_int(ctx_a, 1)],
+        [Qp.from_int(ctx_b, 1)],
+    ]
+    with pytest.raises(ValueError, match="[Cc]ontext"):
+        pairwise_padic_dist_vec(X)
+
+
+def test_pairwise_dist_vec_rejects_non_qp_elements(ctx5):
+    """pairwise_padic_dist_vec must raise TypeError for non-Qp elements."""
+    X = [[1.0, 2.0]]   # plain floats, not Qp
+    with pytest.raises(TypeError):
+        pairwise_padic_dist_vec(X)
+
+
+def test_pairwise_dist_vec_valid_input(ctx5):
+    """pairwise_padic_dist_vec must succeed for a valid uniform-context input."""
+    X = [[Qp.from_int(ctx5, n), Qp.from_int(ctx5, n + 1)] for n in [1, 6, 11]]
+    D = pairwise_padic_dist_vec(X)
+    assert D.shape == (3, 3)
+    np.testing.assert_array_equal(D, D.T)
+    np.testing.assert_array_equal(np.diag(D), 0)
+
+
+# ===========================================================================
+# 12. Edge cases: QpBall.refine precision guard
+# ===========================================================================
+
+def test_ball_refine_raises_at_precision_limit(ctx5):
+    """refine must raise ValueError when n >= ctx.prec (would exceed precision)."""
+    center = Qp.from_int(ctx5, 1)
+    # ctx5.prec = 8; a ball at depth 8 cannot be refined further
+    deep_ball = QpBall(center, ctx5.prec)
+    with pytest.raises(ValueError, match="precision"):
+        deep_ball.refine()
+
+
+def test_ball_refine_raises_beyond_precision_limit(ctx5):
+    """refine must also raise when n > ctx.prec."""
+    center = Qp.from_int(ctx5, 1)
+    beyond_ball = QpBall(center, ctx5.prec + 2)
+    with pytest.raises(ValueError, match="precision"):
+        beyond_ball.refine()
+
+
+def test_ball_refine_succeeds_just_below_precision(ctx5):
+    """refine must succeed for n = ctx.prec - 1 (the last valid depth)."""
+    center = Qp.from_int(ctx5, 1)
+    near_limit_ball = QpBall(center, ctx5.prec - 1)
+    children = near_limit_ball.refine()
+    assert len(children) == ctx5.p

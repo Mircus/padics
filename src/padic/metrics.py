@@ -72,7 +72,46 @@ def pairwise_padic_dist_vec(X: List[List[Qp]]) -> np.ndarray:
     Returns
     -------
     D : np.ndarray, shape (n, n), dtype float64
+
+    Raises
+    ------
+    ValueError
+        If vectors have unequal lengths or elements have mismatched contexts.
+    TypeError
+        If any element is not a Qp instance.
     """
+    if not X:
+        return np.zeros((0, 0), dtype=float)
+
+    dim = len(X[0])
+    if dim == 0:
+        raise ValueError("Vectors must be non-empty (got length 0).")
+
+    # Validate all elements first (type check before context access).
+    for i, row in enumerate(X):
+        if len(row) != dim:
+            raise ValueError(
+                f"Vector at index {i} has length {len(row)}, expected {dim}. "
+                "All vectors must share the same dimension."
+            )
+        for j, elem in enumerate(row):
+            if not isinstance(elem, Qp):
+                raise TypeError(
+                    f"Element at [{i}][{j}] is not a Qp instance "
+                    f"(got {type(elem).__name__})."
+                )
+
+    # Now it is safe to read contexts.
+    ref_ctx: QpContext = X[0][0].ctx
+    for i, row in enumerate(X):
+        for j, elem in enumerate(row):
+            if elem.ctx != ref_ctx:
+                raise ValueError(
+                    f"Context mismatch at [{i}][{j}]: "
+                    f"expected {ref_ctx}, got {elem.ctx}. "
+                    "All elements must share the same QpContext."
+                )
+
     n = len(X)
     D = np.zeros((n, n), dtype=float)
     for i in range(n):

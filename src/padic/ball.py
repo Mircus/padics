@@ -31,17 +31,31 @@ class QpBall:
 
         The p children are centered at  center + d * p^n  for d = 0, …, p-1.
         Since 0 < d < p implies gcd(d, p) = 1, each such shift has valuation n
-        (not center.v + n), so we build the shift directly as Qp(v=n, u_mod=d).
+        exactly, so v_p(d * p^n) = n < ctx.prec (required) and Qp.from_int is
+        the safe, API-respecting constructor for the shift.
+
+        Raises
+        ------
+        ValueError
+            If ``n >= ctx.prec``: refinement would exceed working precision and
+            all children would collapse to the same center under truncation.
         """
         ctx = self.center.ctx
         p = ctx.p
+        if self.n >= ctx.prec:
+            raise ValueError(
+                f"Cannot refine ball beyond working precision: "
+                f"n={self.n} >= ctx.prec={ctx.prec}. "
+                "Increase ctx.prec or stop refinement at n < ctx.prec."
+            )
         subs = []
         for d in range(p):
             if d == 0:
                 new_center = self.center
             else:
-                # d in {1,…,p-1}: gcd(d,p)=1 so v_p(d*p^n) = n exactly
-                shift = Qp(ctx, v=self.n, u_mod=d)
+                # d in {1,…,p-1}: gcd(d,p)=1 so v_p(d*p^n) = n exactly.
+                # Use from_int to respect precision semantics (safe since n < prec).
+                shift = Qp.from_int(ctx, d * (p ** self.n))
                 new_center = self.center.add(shift)
             subs.append(QpBall(new_center, self.n + 1))
         return subs

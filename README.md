@@ -8,8 +8,9 @@
   <img src="padics-logo.jpg" alt="padics logo" width="700">
 </p>
 
-A true **p-adic** foundation for data science — exact arithmetic over **ℚ_p**,
-ultrametric geometry, Hensel lifting, and sklearn-compatible learners.
+A **p-adic** foundation for data science — finite-precision arithmetic over **ℚ_p**
+(truncated to `ctx.prec` significant base-p digits), ultrametric geometry,
+Hensel lifting, and sklearn-compatible learners.
 
 ---
 
@@ -211,6 +212,9 @@ Key conventions:
 - Addition truncates naturally; information lost at the low end is irrecoverable.
 - The BT unit-only distance (`bt_distance`) ignores valuation by design:
   `bt_distance(x, p·x) == 0`.  Use `bt_distance_full` to account for valuation.
+- `QpBall.refine()` is only defined for `n < ctx.prec`; calling it when
+  `n >= ctx.prec` raises `ValueError` (refinement would collapse all children
+  to the same center under truncation).
 
 ---
 
