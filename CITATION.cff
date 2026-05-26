@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use padic-ds in your research, please cite it as below."
+title: "padic-ds: p-adic foundations for data science"
+authors:
+  - family-names: "Mannucci"
+    given-names: "Mirco A."
+    affiliation: "HoloMathics"
+version: "0.1.1"
+date-released: "2026-05-26"
+url: "https://github.com/Mircus/padics"
+license: MIT
+keywords:
+  - p-adic numbers
+  - ultrametric geometry
+  - data science
+  - machine learning
+  - Hensel lifting
+  - Bruhat-Tits tree

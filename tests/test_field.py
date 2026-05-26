@@ -1,140 +1,442 @@
-from padic import QpContext, Qp, QpBall, hensel_lift_simple
+"""
+Comprehensive test suite for padic-ds.
 
-# ---------------------------------------------------------------------------
-# Qp arithmetic
-# ---------------------------------------------------------------------------
+Covers:
+- Qp arithmetic (add, sub, mul, inv, div) with positive and negative valuations
+- Ultrametric inequality
+- QpBall (contains, intersect, refine)
+- Hensel lifting
+- BT distances (unit-only and valuation-aware)
+- Metrics (pairwise distance)
+- PadicKNNClassifier
+- PrecisionError
+- Qp equality / hashing
+"""
 
-def test_add_mul_roundtrip():
-    ctx = QpContext(3, prec=8)
-    x = Qp.from_rational(ctx, 7, 12)   # v = -1 (negative valuation)
-    y = Qp.from_int(ctx, 10)
-    z = x.add(y).sub(y)
-    assert z.u_mod == x.u_mod and z.v == x.v, f"Expected v={x.v}, got v={z.v}"
+import pytest
+import numpy as np
+from padic import (
+    QpContext, Qp, PrecisionError, QpBall,
+    hensel_lift_simple,
+    bt_distance, bt_distance_full, lca_depth, digits_with_valuation,
+    padic_dist, pairwise_padic_dist,
+    PadicKNNClassifier,
+)
 
-def test_inv():
-    ctx = QpContext(5, prec=8)
-    x = Qp.from_rational(ctx, 7, 3)
-    inv = x.inv()
-    one = x.mul(inv)
-    assert one.abs() > 0 and one.val() == 0  # unit (valuation 0)
 
-def test_add_negative_valuation():
-    """x = 1/p, y = p  →  x+y = 1/p + p = (1 + p^2)/p; val = -1."""
-    ctx = QpContext(5, prec=6)
-    x = Qp.from_rational(ctx, 1, 5)   # 1/5, v=-1, u=1
-    y = Qp.from_int(ctx, 5)           # 5,   v=1,  u=1
-    s = x.add(y)
-    assert s.val() == -1, f"Expected val=-1, got {s.val()}"
-    # 1/5 + 5 = 26/5; unit part = 26 = 1 + 5^2 (mod 5^6)
-    expected_u = (1 + 5**2) % (5**6)
-    assert s.u_mod == expected_u, f"Expected u_mod={expected_u}, got {s.u_mod}"
+# ===========================================================================
+# Fixtures
+# ===========================================================================
 
-def test_add_both_negative_valuation():
-    """2/p + 3/p = 5/p = 1; val = 0."""
-    ctx = QpContext(5, prec=6)
-    x = Qp.from_rational(ctx, 2, 5)  # 2/5
-    y = Qp.from_rational(ctx, 3, 5)  # 3/5
-    s = x.add(y)
-    assert s.val() == 0 and s.u_mod == 1, f"Expected (v=0,u=1), got (v={s.val()},u={s.u_mod})"
+@pytest.fixture
+def ctx5():
+    return QpContext(5, prec=8)
 
-def test_add_cancellation():
-    """x + (-x) = 0."""
-    ctx = QpContext(3, prec=8)
-    x = Qp.from_rational(ctx, 5, 9)   # v=-2
-    assert x.add(x.neg()).is_zero()
+@pytest.fixture
+def ctx3():
+    return QpContext(3, prec=8)
 
-def test_from_rational_zero():
-    """from_rational(ctx, 0, n) must return zero without hanging."""
-    ctx = QpContext(7, prec=4)
-    z = Qp.from_rational(ctx, 0, 3)
+@pytest.fixture
+def ctx7():
+    return QpContext(7, prec=6)
+
+
+# ===========================================================================
+# 1. Qp construction and predicates
+# ===========================================================================
+
+def test_zero_is_zero(ctx5):
+    z = Qp.zero(ctx5)
+    assert z.is_zero()
+    assert z.abs() == 0.0
+    assert z.val() == 10**9
+
+def test_from_int_positive(ctx5):
+    x = Qp.from_int(ctx5, 25)   # 25 = 5^2 * 1
+    assert x.v == 2
+    assert x.u_mod == 1
+
+def test_from_int_negative(ctx5):
+    x = Qp.from_int(ctx5, -10)  # -10 = 5 * (-2); unit = -2 mod 5^8
+    assert x.v == 1
+    assert x.u_mod == (-2) % (5**8)
+
+def test_from_int_precision_error(ctx5):
+    # 5^8 has valuation 8 == prec; should raise
+    with pytest.raises(PrecisionError):
+        Qp.from_int(ctx5, 5**8)
+
+def test_from_rational_one_over_p(ctx5):
+    x = Qp.from_rational(ctx5, 1, 5)
+    assert x.v == -1
+    assert x.u_mod == 1
+
+def test_from_rational_negative_den(ctx5):
+    x = Qp.from_rational(ctx5, 2, -5)  # -2/5
+    y = Qp.from_rational(ctx5, 2, 5)
+    # -2/5 should be negation of 2/5
+    assert x.add(y).is_zero()
+
+def test_from_rational_zero(ctx5):
+    z = Qp.from_rational(ctx5, 0, 7)
     assert z.is_zero()
 
-def test_mul_negative_valuation():
-    """(1/p) * (1/p) = 1/p^2."""
-    ctx = QpContext(5, prec=6)
-    x = Qp.from_rational(ctx, 1, 5)
+def test_from_rational_zero_den(ctx5):
+    with pytest.raises(ZeroDivisionError):
+        Qp.from_rational(ctx5, 1, 0)
+
+
+# ===========================================================================
+# 2. Equality and hashing
+# ===========================================================================
+
+def test_equality_same(ctx5):
+    x = Qp.from_int(ctx5, 7)
+    y = Qp.from_int(ctx5, 7)
+    assert x == y
+
+def test_equality_zero(ctx5):
+    assert Qp.zero(ctx5) == Qp.zero(ctx5)
+
+def test_equality_distinct(ctx5):
+    assert Qp.from_int(ctx5, 3) != Qp.from_int(ctx5, 4)
+
+def test_equality_context_mismatch():
+    x = Qp.from_int(QpContext(5, 4), 3)
+    y = Qp.from_int(QpContext(7, 4), 3)
+    assert x != y
+
+def test_hash_equal_elements(ctx5):
+    x = Qp.from_int(ctx5, 7)
+    y = Qp.from_int(ctx5, 7)
+    assert hash(x) == hash(y)
+
+def test_hash_in_set(ctx5):
+    x = Qp.from_int(ctx5, 7)
+    y = Qp.from_int(ctx5, 7)
+    z = Qp.from_int(ctx5, 11)
+    s = {x, z}
+    assert y in s  # y == x, same hash
+
+
+# ===========================================================================
+# 3. Arithmetic — basic
+# ===========================================================================
+
+def test_add_commutativity(ctx3):
+    x = Qp.from_rational(ctx3, 7, 12)
+    y = Qp.from_int(ctx3, 10)
+    assert x.add(y) == y.add(x)
+
+def test_add_associativity(ctx5):
+    x = Qp.from_int(ctx5, 2)
+    y = Qp.from_int(ctx5, 3)
+    z = Qp.from_int(ctx5, 7)
+    assert x.add(y).add(z) == x.add(y.add(z))
+
+def test_add_negative_valuation(ctx5):
+    """1/p + p = (1 + p^2)/p; val = -1."""
+    x = Qp.from_rational(ctx5, 1, 5)
+    y = Qp.from_int(ctx5, 5)
+    s = x.add(y)
+    assert s.val() == -1
+    expected_u = (1 + 5**2) % (5**8)
+    assert s.u_mod == expected_u
+
+def test_add_both_negative_valuation(ctx5):
+    """2/p + 3/p = 5/p = 1; val = 0."""
+    x = Qp.from_rational(ctx5, 2, 5)
+    y = Qp.from_rational(ctx5, 3, 5)
+    s = x.add(y)
+    assert s.val() == 0 and s.u_mod == 1
+
+def test_add_cancellation(ctx3):
+    x = Qp.from_rational(ctx3, 5, 9)
+    assert x.add(x.neg()).is_zero()
+
+def test_sub_roundtrip(ctx3):
+    x = Qp.from_rational(ctx3, 7, 12)
+    y = Qp.from_int(ctx3, 10)
+    z = x.add(y).sub(y)
+    assert z == x
+
+def test_mul_commutativity(ctx5):
+    x = Qp.from_int(ctx5, 3)
+    y = Qp.from_int(ctx5, 7)
+    assert x.mul(y) == y.mul(x)
+
+def test_mul_valuation_additivity(ctx5):
+    """v_p(x*y) = v_p(x) + v_p(y)."""
+    x = Qp.from_rational(ctx5, 1, 5)   # v=-1
+    y = Qp.from_int(ctx5, 25)          # v=2
+    assert x.mul(y).val() == -1 + 2
+
+def test_mul_negative_valuation(ctx5):
+    """(1/p)^2 = 1/p^2."""
+    x = Qp.from_rational(ctx5, 1, 5)
     r = x.mul(x)
     assert r.val() == -2 and r.u_mod == 1
 
-# ---------------------------------------------------------------------------
-# QpBall.refine
-# ---------------------------------------------------------------------------
+def test_inv_roundtrip(ctx5):
+    x = Qp.from_rational(ctx5, 7, 3)
+    one = x.mul(x.inv())
+    assert one.val() == 0 and one.u_mod == 1
 
-def test_refine_covers_parent():
-    """Every point in the parent ball must be in exactly one child."""
-    ctx = QpContext(5, prec=6)
-    center = Qp.from_int(ctx, 7)
+def test_div(ctx5):
+    x = Qp.from_int(ctx5, 6)
+    y = Qp.from_int(ctx5, 2)
+    three = x.div(y)
+    assert three == Qp.from_int(ctx5, 3)
+
+def test_inv_zero_raises(ctx5):
+    with pytest.raises(ZeroDivisionError):
+        Qp.zero(ctx5).inv()
+
+def test_context_mismatch_add():
+    x = Qp.from_int(QpContext(5, 6), 1)
+    y = Qp.from_int(QpContext(7, 6), 1)
+    with pytest.raises(ValueError):
+        x.add(y)
+
+def test_context_mismatch_mul():
+    x = Qp.from_int(QpContext(5, 6), 1)
+    y = Qp.from_int(QpContext(7, 6), 1)
+    with pytest.raises(ValueError):
+        x.mul(y)
+
+
+# ===========================================================================
+# 4. Ultrametric inequality  d(x,z) ≤ max(d(x,y), d(y,z))
+# ===========================================================================
+
+@pytest.mark.parametrize("a,b,c", [
+    (1, 2, 3), (5, 10, 15), (1, 5, 25), (7, 14, 21), (1, 7, 49)
+])
+def test_ultrametric_inequality(ctx5, a, b, c):
+    x = Qp.from_int(ctx5, a)
+    y = Qp.from_int(ctx5, b)
+    z = Qp.from_int(ctx5, c)
+    dxz = padic_dist(x, z)
+    dxy = padic_dist(x, y)
+    dyz = padic_dist(y, z)
+    assert dxz <= max(dxy, dyz) + 1e-12, \
+        f"Ultrametric violated: d({a},{c})={dxz} > max(d({a},{b})={dxy}, d({b},{c})={dyz})"
+
+
+# ===========================================================================
+# 5. QpBall
+# ===========================================================================
+
+def test_ball_contains_center(ctx5):
+    center = Qp.from_int(ctx5, 7)
+    ball = QpBall(center, 3)
+    assert ball.contains(center)
+
+def test_ball_refine_covers_parent(ctx5):
+    center = Qp.from_int(ctx5, 7)
     parent = QpBall(center, 1)
     children = parent.refine()
     assert len(children) == 5
-    # sample 25 integers and check each is in exactly one child
     for k in range(25):
-        pt = Qp.from_int(ctx, k)
+        try:
+            pt = Qp.from_int(ctx5, k)
+        except PrecisionError:
+            continue
         if parent.contains(pt):
             hits = [c.contains(pt) for c in children]
-            assert sum(hits) == 1, f"pt={k} in {sum(hits)} children (expected 1)"
+            assert sum(hits) == 1, f"pt={k} in {sum(hits)} children"
 
-def test_refine_shifts_correct():
-    """Child d should contain center + d*p^n."""
-    ctx = QpContext(5, prec=6)
-    center = Qp.from_rational(ctx, 1, 5)   # 1/5, v=-1
+def test_ball_refine_shifts_correct(ctx5):
+    center = Qp.from_rational(ctx5, 1, 5)
     n = 1
     ball = QpBall(center, n)
     children = ball.refine()
-    p = ctx.p
+    p = ctx5.p
     for d in range(p):
         if d == 0:
-            shift_elem = Qp.zero(ctx)
+            shift_elem = Qp.zero(ctx5)
         else:
-            shift_elem = Qp(ctx, v=n, u_mod=d)
+            shift_elem = Qp(ctx5, v=n, u_mod=d)
         expected_center = center.add(shift_elem)
-        child = children[d]
-        assert child.contains(expected_center), (
-            f"Child {d} does not contain its own expected center"
-        )
+        assert children[d].contains(expected_center)
 
-def test_refine_zero_center():
-    """Refine on B(0, 1): 5 children with distinct residues 0..4 mod p."""
-    ctx = QpContext(5, prec=6)
-    zero = Qp.zero(ctx)
+def test_ball_refine_zero_center(ctx5):
+    zero = Qp.zero(ctx5)
     ball = QpBall(zero, 0)
     children = ball.refine()
     assert len(children) == 5
-    # child d should contain Qp(d) for d=0,1,2,3,4
     for d in range(5):
-        pt = Qp.from_int(ctx, d)
-        assert children[d].contains(pt), f"Child {d} should contain integer {d}"
-        # and NOT contain any other digit
+        pt = Qp.from_int(ctx5, d)
+        assert children[d].contains(pt)
         for d2 in range(5):
             if d2 != d:
-                pt2 = Qp.from_int(ctx, d2)
-                assert not children[d].contains(pt2), (
-                    f"Child {d} should NOT contain integer {d2}"
-                )
+                pt2 = Qp.from_int(ctx5, d2)
+                assert not children[d].contains(pt2)
 
-def test_repr_no_crash():
-    """QpBall.__repr__ must not raise."""
-    ctx = QpContext(3, prec=4)
-    b = QpBall(Qp.from_int(ctx, 1), 2)
-    assert "p^(-2)" in repr(b)
+def test_ball_repr_no_crash(ctx3):
+    b = QpBall(Qp.from_int(ctx3, 1), 2)
+    r = repr(b)
+    assert "p^(-2)" in r
 
-# ---------------------------------------------------------------------------
-# Hensel lift
-# ---------------------------------------------------------------------------
+def test_ball_intersect(ctx5):
+    x = Qp.from_int(ctx5, 1)
+    y = Qp.from_int(ctx5, 2)
+    big_ball = QpBall(x, 0)     # radius 1 (contains all units)
+    small_ball = QpBall(x, 3)   # radius 5^{-3}
+    assert big_ball.intersect(small_ball) is not None
 
-def test_hensel_lift_sqrt():
-    """Lift sqrt(2) in Z_7: 2 is a QR mod 7 (3^2 = 9 ≡ 2), so root exists."""
-    ctx = QpContext(7, prec=6)
-    # f(x) = x^2 - 2, f'(x) = 2x
+def test_ball_intersect_disjoint(ctx5):
+    x = Qp.from_int(ctx5, 1)
+    y = Qp.from_int(ctx5, 2)
+    b1 = QpBall(x, 1)
+    b2 = QpBall(y, 1)
+    # 1 and 2 differ mod 5, so balls of radius 5^{-1} are disjoint
+    assert b1.intersect(b2) is None
+
+
+# ===========================================================================
+# 6. Hensel lifting
+# ===========================================================================
+
+def test_hensel_lift_sqrt7(ctx7):
+    """sqrt(2) in Z_7: 3^2 = 9 ≡ 2 (mod 7)."""
     root = hensel_lift_simple(
-        ctx,
-        fZ=lambda a: a*a - 2,
-        fZprime=lambda a: 2*a,
-        a0_mod_p=3,       # 3^2 = 9 ≡ 2 (mod 7)
+        ctx7,
+        fZ=lambda a: a * a - 2,
+        fZprime=lambda a: 2 * a,
+        a0_mod_p=3,
         target_prec=6,
     )
-    # verify root^2 ≡ 2 (mod 7^6)
-    check = root.mul(root).sub(Qp.from_int(ctx, 2))
-    assert check.is_zero() or check.val() >= ctx.prec, (
-        f"Hensel root squared ≠ 2: val={check.val()}"
+    check = root.mul(root).sub(Qp.from_int(ctx7, 2))
+    assert check.is_zero() or check.val() >= ctx7.prec
+
+def test_hensel_lift_sqrt5():
+    """sqrt(6) in Z_5: a0=1 since 1-6=-5≡0 mod 5, f'(1)=2 invertible."""
+    ctx = QpContext(5, prec=6)
+    root = hensel_lift_simple(
+        ctx,
+        fZ=lambda a: a * a - 6,
+        fZprime=lambda a: 2 * a,
+        a0_mod_p=1,
+        target_prec=6,
     )
+    check = root.mul(root).sub(Qp.from_int(ctx, 6))
+    assert check.is_zero() or check.val() >= ctx.prec
+
+def test_hensel_bad_initial():
+    """Should raise when f(a0) ≢ 0 mod p."""
+    ctx = QpContext(5, prec=6)
+    with pytest.raises(ValueError, match="precondition"):
+        hensel_lift_simple(
+            ctx,
+            fZ=lambda a: a * a - 2,
+            fZprime=lambda a: 2 * a,
+            a0_mod_p=0,   # 0^2 - 2 = -2 ≢ 0 mod 5
+            target_prec=6,
+        )
+
+def test_hensel_bad_derivative():
+    """Should raise when f'(a0) ≡ 0 mod p (multiple root)."""
+    ctx = QpContext(5, prec=6)
+    with pytest.raises(ValueError, match="precondition"):
+        hensel_lift_simple(
+            ctx,
+            fZ=lambda a: a * a,           # root = 0, double root
+            fZprime=lambda a: 2 * a,
+            a0_mod_p=0,
+            target_prec=6,
+        )
+
+
+# ===========================================================================
+# 7. BT distances
+# ===========================================================================
+
+def test_bt_distance_same(ctx5):
+    x = Qp.from_int(ctx5, 3)
+    assert bt_distance(ctx5, x, x) == 0
+
+def test_bt_distance_zero_zero(ctx5):
+    assert bt_distance(ctx5, Qp.zero(ctx5), Qp.zero(ctx5)) == 0
+
+def test_bt_distance_unit_only_limitation(ctx5):
+    """bt_distance ignores valuation: d_BT(x, p*x) == 0 by design."""
+    x = Qp.from_int(ctx5, 3)
+    px = Qp.from_int(ctx5, 15)  # 3 * 5
+    # unit digits of 3 == unit digits of 15 (both have unit part 3)
+    assert bt_distance(ctx5, x, px) == 0
+
+def test_bt_distance_full_valuation_aware(ctx5):
+    """bt_distance_full should distinguish x from p*x."""
+    x = Qp.from_int(ctx5, 3)
+    px = Qp.from_int(ctx5, 15)
+    # Their valuation-aware digit sequences differ at the leading position
+    assert bt_distance_full(ctx5, x, px) > 0
+
+def test_digits_with_valuation_zero(ctx5):
+    digs = digits_with_valuation(Qp.zero(ctx5), ctx5.prec)
+    assert digs == [0] * ctx5.prec
+
+def test_lca_depth_common_prefix():
+    assert lca_depth([1, 2, 3, 4], [1, 2, 0, 4]) == 2
+
+def test_lca_depth_empty():
+    assert lca_depth([], [1, 2]) == 0
+
+
+# ===========================================================================
+# 8. Pairwise distance matrix
+# ===========================================================================
+
+def test_pairwise_dist_symmetric(ctx5):
+    pts = [Qp.from_int(ctx5, k) for k in [1, 2, 5, 10]]
+    D = pairwise_padic_dist(pts)
+    assert D.shape == (4, 4)
+    np.testing.assert_array_equal(D, D.T)
+    np.testing.assert_array_equal(np.diag(D), 0)
+
+def test_pairwise_dist_ultrametric(ctx5):
+    """All triangles in the pairwise matrix satisfy ultrametric inequality."""
+    pts = [Qp.from_int(ctx5, k) for k in [1, 2, 5, 10, 25]]
+    D = pairwise_padic_dist(pts)
+    n = len(pts)
+    for i in range(n):
+        for j in range(n):
+            for k in range(n):
+                assert D[i, k] <= max(D[i, j], D[j, k]) + 1e-12
+
+
+# ===========================================================================
+# 9. PadicKNNClassifier
+# ===========================================================================
+
+def test_knn_fit_predict(ctx3):
+    X = [[Qp.from_int(ctx3, n)] for n in [1, 4, 10, 13, 40, 121]]
+    y = np.array([0, 0, 0, 1, 1, 1])
+    clf = PadicKNNClassifier(ctx3, k=1)
+    clf.fit(X, y)
+    pred = clf.predict(X)
+    assert (pred == y).all()
+
+def test_knn_predict_proba(ctx3):
+    X = [[Qp.from_int(ctx3, n)] for n in [1, 4, 10, 13, 40, 121]]
+    y = np.array([0, 0, 0, 1, 1, 1])
+    clf = PadicKNNClassifier(ctx3, k=3)
+    clf.fit(X, y)
+    proba = clf.predict_proba(X)
+    assert proba.shape == (6, 2)
+    np.testing.assert_allclose(proba.sum(axis=1), 1.0)
+
+def test_knn_context_mismatch_raises(ctx3):
+    ctx7 = QpContext(7, 6)
+    X = [[Qp.from_int(ctx3, 1)]]
+    clf = PadicKNNClassifier(ctx7, k=1)
+    clf.fit([[Qp.from_int(ctx7, 1)]], np.array([0]))
+    with pytest.raises(ValueError, match="context"):
+        clf.predict(X)
+
+def test_knn_not_fitted_raises(ctx3):
+    from sklearn.exceptions import NotFittedError
+    clf = PadicKNNClassifier(ctx3, k=1)
+    with pytest.raises(NotFittedError):
+        clf.predict([[Qp.from_int(ctx3, 1)]])
