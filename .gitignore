@@ -37,3 +37,4 @@ Thumbs.db
 
 # HyRI internal
 .hyri_baseline.json
+.github/
