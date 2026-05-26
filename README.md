@@ -6,7 +6,7 @@
 
 
 <p align="center">
-  <img src="padics-logo.jpg" alt="padics logo" width="500">
+  <img src="padics-logo.jpg" alt="padics logo" width="700">
 </p>
 
 A true **p-adic** foundation for data science — exact arithmetic over **ℚ_p**,
