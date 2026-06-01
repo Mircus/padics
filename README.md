@@ -2,6 +2,7 @@
 
 [![Python](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://pypi.org/project/padic-ds/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Paper](https://img.shields.io/badge/paper-ResearchGate-00CCBB)](https://www.researchgate.net/publication/405646140_padic-ds_A_Bounded_Finite-Precision_p-Adic_Library_for_Data_Science_Ultrametric_Arithmetic_BT-Inspired_Digit_Trees_and_scikit-learn_Learners)
 
 
 <p align="center">
