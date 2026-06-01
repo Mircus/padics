@@ -13,8 +13,11 @@ Provided functions
 """
 
 from __future__ import annotations
-import numpy as np
+
 from typing import List
+
+import numpy as np
+
 from .field import Qp, QpContext
 
 

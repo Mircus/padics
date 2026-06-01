@@ -10,20 +10,20 @@ Quick start::
     print(padic_dist(x, y))
 """
 
-from .field import QpContext, Qp, PrecisionError
 from .ball import QpBall
-from .hensel import hensel_lift_simple
 from .btree import (
     BTRootedTree,
     bt_distance,
     bt_distance_full,
-    lca_depth,
     digits_p_adic,
     digits_with_valuation,
+    lca_depth,
 )
-from .metrics import padic_abs, padic_dist, pairwise_padic_dist, pairwise_padic_dist_vec
-from .knn import PadicKNNClassifier, embed_float_array
+from .field import PrecisionError, Qp, QpContext
 from .hclust import ultrametric_dendrogram
+from .hensel import hensel_lift_simple
+from .knn import PadicKNNClassifier, embed_float_array
+from .metrics import padic_abs, padic_dist, pairwise_padic_dist, pairwise_padic_dist_vec
 
 __all__ = [
     # Core arithmetic

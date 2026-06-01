@@ -28,8 +28,10 @@ Precision contract
 """
 
 from __future__ import annotations
+
 from typing import Callable
-from .field import QpContext, Qp, vp_int
+
+from .field import Qp, QpContext, vp_int
 
 
 def hensel_lift_simple(

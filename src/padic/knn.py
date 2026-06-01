@@ -18,10 +18,13 @@ To embed a NumPy float array into Qp^d see :func:`embed_float_array`.
 """
 
 from __future__ import annotations
+
+from typing import List
+
 import numpy as np
-from typing import List, Optional
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils.validation import check_is_fitted
+
 from .field import Qp, QpContext
 from .metrics import padic_dist
 

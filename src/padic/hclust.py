@@ -1,8 +1,11 @@
 
-import numpy as np
 from typing import List
-from .field import Qp, QpContext
+
+import numpy as np
+
 from .btree import digits_p_adic, lca_depth
+from .field import Qp, QpContext
+
 
 def ultrametric_dendrogram(ctx: QpContext, X: List[Qp]) -> np.ndarray:
     """Return a symmetric matrix of 'heights' = ctx.prec - LCA_depth.

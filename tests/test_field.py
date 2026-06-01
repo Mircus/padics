@@ -13,16 +13,24 @@ Covers:
 - Qp equality / hashing
 """
 
-import pytest
 import numpy as np
-from padic import (
-    QpContext, Qp, PrecisionError, QpBall,
-    hensel_lift_simple,
-    bt_distance, bt_distance_full, lca_depth, digits_with_valuation,
-    padic_dist, pairwise_padic_dist, pairwise_padic_dist_vec,
-    PadicKNNClassifier,
-)
+import pytest
 
+from padic import (
+    PadicKNNClassifier,
+    PrecisionError,
+    Qp,
+    QpBall,
+    QpContext,
+    bt_distance,
+    bt_distance_full,
+    digits_with_valuation,
+    hensel_lift_simple,
+    lca_depth,
+    padic_dist,
+    pairwise_padic_dist,
+    pairwise_padic_dist_vec,
+)
 
 # ===========================================================================
 # Fixtures
@@ -280,7 +288,6 @@ def test_ball_repr_no_crash(ctx3):
 
 def test_ball_intersect(ctx5):
     x = Qp.from_int(ctx5, 1)
-    y = Qp.from_int(ctx5, 2)
     big_ball = QpBall(x, 0)     # radius 1 (contains all units)
     small_ball = QpBall(x, 3)   # radius 5^{-3}
     assert big_ball.intersect(small_ball) is not None

@@ -1,8 +1,10 @@
 
 from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Tuple
-from .field import Qp, QpContext, vp_int
+
+from .field import Qp
+
 
 @dataclass(frozen=True)
 class QpBall:

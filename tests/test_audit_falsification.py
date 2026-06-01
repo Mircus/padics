@@ -29,17 +29,24 @@ F14 digits_with_valuation: length contract and zero-element contract
 F15 lca_depth: symmetric, bounded by min-length
 """
 
-import pytest
 import numpy as np
+import pytest
+
 from padic import (
-    QpContext, Qp, PrecisionError, QpBall,
+    PadicKNNClassifier,
+    PrecisionError,
+    Qp,
+    QpContext,
+    bt_distance,
+    bt_distance_full,
+    digits_with_valuation,
+    embed_float_array,
     hensel_lift_simple,
-    bt_distance, bt_distance_full, lca_depth, digits_with_valuation,
-    padic_dist, pairwise_padic_dist, pairwise_padic_dist_vec,
-    PadicKNNClassifier, embed_float_array,
+    lca_depth,
+    pairwise_padic_dist_vec,
     ultrametric_dendrogram,
 )
-
+from padic.field import vp_int
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -554,7 +561,7 @@ def test_lca_depth_no_common_prefix():
 # F16 — vp_int edge cases
 # ===========================================================================
 
-from padic.field import vp_int
+
 
 def test_vp_int_zero_returns_sentinel():
     assert vp_int(0, 5) == 10**9

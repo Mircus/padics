@@ -27,10 +27,11 @@ Use ``bt_distance_full`` for the valuation-aware variant.
 """
 
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import List, Optional
-from .field import QpContext, Qp
 
+from .field import Qp, QpContext
 
 # ---------------------------------------------------------------------------
 # Digit representations
