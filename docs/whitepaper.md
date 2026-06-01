@@ -1,4 +1,4 @@
-# The Advantages of p-Adic Numbers for Advanced AI
+# padic-ds: A Finite-Precision p-Adic Arithmetic and Ultrametric ML Sandbox
 
 **Technical Brief · padic-ds Project · May 2026 · v3 (expanded & synchronised)**
 
@@ -13,13 +13,14 @@ compositional generalisation, robustness to adversarial perturbation — are
 fundamentally *non-Euclidean* in character. p-Adic numbers, the unique
 completions of ℚ with respect to the *p-adic absolute value*, offer a
 mathematically rigorous alternative geometry whose properties align
-surprisingly well with the structural demands of advanced AI.
+with structural demands of certain AI tasks — hierarchical reasoning,
+symbolic structure, and compositional generalisation.
 
 This document serves three purposes:
 
-1. **Technical argument** — seven concrete advantages of the p-adic framework
-   for AI, each grounded in mathematics and in the `padic-ds` reference
-   implementation.
+1. **Technical argument** — seven structural properties of p-adic geometry
+   that may be useful for AI, each grounded in mathematics and illustrated
+   with the `padic-ds` reference implementation.
 2. **Repository guide** — a full walkthrough of the `padic-ds` v0.1.1 library:
    modules, API, install, tests, and notebooks.
 3. **Literature survey** — an annotated bibliography of p-adic methods in AI
@@ -57,9 +58,9 @@ Three facts distinguish ℚ_p from ℝ radically:
 Together these properties endow ℚ_p with a canonical *tree structure* — the
 Bruhat–Tits (BT) tree — where arithmetic proximity is equivalent to shared
 prefixes in a base-p digit expansion. The `padic-ds` library (`src/padic/`)
-implements this from first principles: exact Q_p arithmetic with finite
-precision (`field.py`), ultrametric balls (`ball.py`), Hensel lifting
-(`hensel.py`), BT-tree distances (`btree.py`), and prototype ML algorithms
+implements this from first principles: finite-precision p-adic arithmetic
+over a bounded digit window (`field.py`), ultrametric balls (`ball.py`), Hensel lifting
+(`hensel.py`), BT-inspired digit-prefix distances (`btree.py`), and toy ML algorithms
 (`knn.py`, `hclust.py`).
 
 **Notation used throughout**: Q_p (p-adic field), Z_p (p-adic integers),
@@ -107,11 +108,13 @@ def lca_depth(d1: List[int], d2: List[int]) -> int:
     return k
 ```
 
-There is no distortion: the p-adic metric *is* the tree metric, not an
-approximation of it. Embedding a taxonomy of depth D into Z_p at precision D
-is lossless. For AI tasks built on hierarchical structures — WordNet
+For suitably encoded rooted hierarchies, digit-prefix distances can
+preserve the intended hierarchy exactly up to the chosen precision. However,
+this is not a general theorem about arbitrary taxonomies or arbitrary tree
+metrics — it depends on the encoding. For AI tasks built on hierarchical structures — WordNet
 embeddings, biological taxonomies, code call-graphs, compositional grammar —
-this eliminates an entire class of representational error.
+p-adic encoding can reduce representational error when the
+hierarchy matches the digit structure.
 
 ---
 
@@ -131,8 +134,9 @@ In an ultrametric space, the strong triangle inequality — d(x,z) ≤
 max{d(x,y), d(y,z)} — means any two balls are either nested or disjoint, with
 no ambiguous border regions. Crucially, the **distance spectrum is
 discrete**: in Q_p, pairwise distances can only take values in
-{0, 1, p, p², p³, …}, not a continuum. This discretisation keeps kNN
-decision boundaries crisp even as the number of points grows.
+{0, 1, p, p², p³, …}, not a continuum. This discretisation may help stabilise kNN
+neighbour rankings, though it also creates many exact ties and
+precision-dependent degeneracies.
 
 **Important qualification**: This dimension-independence argument applies to
 the *single-coordinate* p-adic metric. For product spaces Q_p^d equipped
@@ -388,10 +392,10 @@ current implementation status:
 
 | p-Adic Advantage | AI Subsystem | Status |
 |---|---|---|
-| Exact tree metric | Knowledge graph embeddings | **Implemented** (btree.py, hclust.py) |
-| Ultrametric kNN | Embedding retrieval / RAG | **Implemented** (knn.py) — index is roadmap |
+| Digit-prefix distance tools | Hierarchical distance computation | **Implemented** (btree.py, hclust.py) |
+| Toy ultrametric kNN | Prototype classifier | **Implemented** (knn.py) — index structure is roadmap |
 | Hensel lifting | Constraint solvers, SAT/SMT | **Implemented** (linear); quadratic is roadmap |
-| Exact arithmetic | Neuro-symbolic / theorem proving | **Implemented** (field.py) |
+| Modular-exact arithmetic (mod p^N) | Neuro-symbolic / theorem proving | **Implemented** (field.py) |
 | BT exact index | Vector databases | **Near-term roadmap** — distance function only |
 | p-Adic wavelets | Multi-scale sequence models | **Research prospect** |
 | Group equivariance | Hierarchical data classification | **Research prospect** |
@@ -520,7 +524,8 @@ padic-ds/
 │       ├── knn.py              # PadicKNNClassifier, embed_float_array
 │       └── hclust.py           # ultrametric_dendrogram
 ├── tests/
-│   └── test_field.py           # ~45 pytest tests covering all modules
+│   ├── test_field.py           # Core module tests
+│   └── test_audit_falsification.py  # R&D audit / edge-case tests (F1–F16)
 ├── notebooks/
 │   ├── 03_padic_basics.ipynb   # Q_p arithmetic, balls, Hensel lifting
 │   └── 04_ultrametric_ml.ipynb # BT digits, dendrograms, p-adic kNN
@@ -645,7 +650,7 @@ lift is *linear*: one digit of precision per step, O(prec) total steps.
 
 ---
 
-#### `btree.py` — Bruhat–Tits Tree Distances
+#### `btree.py` — BT-Inspired Digit-Prefix Distances
 
 Two digit encodings are provided:
 
@@ -766,8 +771,9 @@ from padic import (
 
 ### 11.6 Test Suite
 
-`tests/test_field.py` contains approximately 45 pytest tests organised into
-9 sections:
+The `tests/` directory contains 143 pytest tests across two files
+(`test_field.py` and `test_audit_falsification.py`), organised into
+multiple sections:
 
 | Section | Tests |
 |---|---|
@@ -1074,9 +1080,10 @@ underlying all AI advantages described in this brief.
 ## 13. Conclusion
 
 p-Adic numbers are not a curiosity for number theorists. Their properties —
-the ultrametric inequality, the canonical tree structure, the exact arithmetic,
-the rich symmetry group, the tractable index — map directly onto the structural
-demands of advanced AI: hierarchical reasoning, exact symbolic computation,
+the ultrametric inequality, the canonical tree structure, the modular-exact
+arithmetic, the rich symmetry group, the tractable index — map onto structural
+demands of AI tasks involving hierarchy, symbolic computation, and multi-scale
+representation: hierarchical reasoning, exact symbolic computation,
 efficient retrieval, and principled multi-scale representation.
 
 The argument is not that p-adics should replace Euclidean geometry in AI, but
