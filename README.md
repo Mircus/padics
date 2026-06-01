@@ -174,10 +174,11 @@ print(clf.predict_proba(X))
 
 ## Notebooks
 
-| Notebook | Description |
-|----------|-------------|
-| `notebooks/03_padic_basics.ipynb` | Qp arithmetic, balls, Hensel lifting |
-| `notebooks/04_ultrametric_ml.ipynb` | BT digits, dendrograms, p-adic kNN |
+| Notebook | Open in Colab | Description |
+|----------|---------------|-------------|
+| `notebooks/00_tutorial.ipynb` | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Mircus/padics/blob/master/notebooks/00_tutorial.ipynb) | **Complete tutorial** — arithmetic, balls, Hensel lifting, clustering, kNN, visualisations |
+| `notebooks/03_padic_basics.ipynb` | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Mircus/padics/blob/master/notebooks/03_padic_basics.ipynb) | Qp arithmetic, balls, Hensel lifting |
+| `notebooks/04_ultrametric_ml.ipynb` | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Mircus/padics/blob/master/notebooks/04_ultrametric_ml.ipynb) | Dendrograms, distance heatmap, p-adic kNN |
 
 ---
 
