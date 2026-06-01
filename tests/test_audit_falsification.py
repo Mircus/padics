@@ -381,19 +381,12 @@ def test_knn_k1_memorizes_train(ctx3):
     np.testing.assert_array_equal(pred, y)
 
 def test_knn_k_greater_than_n_train(ctx5):
-    """k > n_train: predict should not raise (argsort clamps to n_train)."""
+    """k > n_train: fit() must raise ValueError."""
     X = [[Qp.from_int(ctx5, n)] for n in [1, 6]]
     y = np.array([0, 1])
     clf = PadicKNNClassifier(ctx5, k=10)  # k > 2 training points
-    clf.fit(X, y)
-    # May silently use all training points or raise — just must not crash
-    try:
-        pred = clf.predict(X)
-        proba = clf.predict_proba(X)
-        # If it does not raise, probabilities must still sum to 1
-        np.testing.assert_allclose(proba.sum(axis=1), 1.0)
-    except Exception as exc:
-        pytest.skip(f"k > n_train raises {type(exc).__name__}: {exc}")
+    with pytest.raises(ValueError, match="exceeds number of training samples"):
+        clf.fit(X, y)
 
 def test_knn_empty_X_raises(ctx3):
     """Fitting or predicting with empty X should raise ValueError."""

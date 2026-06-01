@@ -113,10 +113,24 @@ class PadicKNNClassifier(BaseEstimator, ClassifierMixin):
         Returns
         -------
         self
+
+        Raises
+        ------
+        ValueError
+            If k < 1, k > len(X), or len(X) != len(y).
         """
         self._validate_X(X, "X")
+        y_arr = np.asarray(y)
+        if self.k < 1:
+            raise ValueError(f"k must be >= 1, got {self.k}")
+        if self.k > len(X):
+            raise ValueError(
+                f"k={self.k} exceeds number of training samples ({len(X)})")
+        if len(X) != len(y_arr):
+            raise ValueError(
+                f"X and y must have the same length: {len(X)} vs {len(y_arr)}")
         self._X_fit = X
-        self._y_fit = np.asarray(y)
+        self._y_fit = y_arr
         self.classes_ = np.unique(self._y_fit)
         return self
 
@@ -182,7 +196,8 @@ class PadicKNNClassifier(BaseEstimator, ClassifierMixin):
     def _proba_one(self, x: List[Qp]) -> np.ndarray:
         idx, _ = self._neighbours(x)
         labels = self._y_fit[idx]
+        actual_k = len(idx)
         proba = np.zeros(len(self.classes_))
         for i, cls in enumerate(self.classes_):
-            proba[i] = np.sum(labels == cls) / self.k
+            proba[i] = np.sum(labels == cls) / actual_k
         return proba

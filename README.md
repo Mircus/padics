@@ -20,11 +20,13 @@ The p-adic metric is an *ultrametric*: every triangle is isosceles
 (d(x,z) ≤ max{d(x,y), d(y,z)}), balls are both open and closed, and any
 two balls are either disjoint or nested.  This structure:
 
-- Embeds **hierarchies without distortion** (contrast: Euclidean embeddings
-  of trees incur Ω(√log n) distortion).
-- **Eliminates the crowding effect**: in high-dimensional ℝ^n nearest/farthest
-  distances converge; in the ultrametric world distances are always
-  well-separated.
+- Can represent **certain rooted hierarchies naturally** when the encoding
+  is chosen appropriately (contrast: generic Euclidean tree embeddings
+  incur Ω(√log n) distortion).
+- **May reduce concentration pathologies**: in high-dimensional ℝ^n
+  nearest/farthest distances converge; ultrametric distances can be
+  better separated, though they introduce distance ties and
+  precision-dependent degeneracies.
 - Provides a **canonical multi-scale decomposition** via p-adic balls — a
   natural analogue of wavelets for hierarchical data.
 
@@ -204,7 +206,12 @@ print(clf.predict_proba(X))
 
 ## Precision semantics
 
-All elements are stored at `ctx.prec` significant base-p digits.
+> **This is a bounded fixed-window model, not a full relative-precision
+> p-adic floating-point system.**  Every element is stored with exactly
+> `ctx.prec` significant base-p digits — there is no per-element precision
+> tracking and no lazy/exact arithmetic.  Results are always truncated to the
+> global window; information lost at the low end is irrecoverable.
+
 Key conventions:
 
 - `v_p(0) = +∞` represented by the sentinel `10**9`.
