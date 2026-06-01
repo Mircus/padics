@@ -15,6 +15,14 @@ Hensel lifting, and sklearn-compatible learners.
 
 ---
 
+## Companion Paper
+
+A companion article with full mathematical background, worked examples, and an audit log is available on ResearchGate:
+
+> [**padic-ds: A Bounded Finite-Precision p-Adic Library for Data Science**](https://www.researchgate.net/publication/405646140_padic-ds_A_Bounded_Finite-Precision_p-Adic_Library_for_Data_Science_Ultrametric_Arithmetic_BT-Inspired_Digit_Trees_and_scikit-learn_Learners)
+
+---
+
 ## Why p-adics for data science?
 
 The p-adic metric is an *ultrametric*: every triangle is isosceles
